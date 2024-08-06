@@ -1,7 +1,6 @@
 import sys
 import socket
 import random
-
 from checksum import generate_checksum_codeword
 from crc import generate_crc_codeword
 from error_injector import inject_error
