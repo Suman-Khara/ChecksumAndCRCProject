@@ -3,7 +3,7 @@ import socket
 import random
 from checksum import generate_checksum_codeword
 from crc import generate_crc_codeword
-from error_injector import inject_error
+from error_injector import inject_error_random, inject_error_manual
 
 # Define the server address and port
 SERVER_ADDRESS = 'localhost'
@@ -13,8 +13,11 @@ def read_file(file_path):
     with open(file_path, 'r') as file:
         return file.read().strip()
 
-def break_into_packets(bitstream, packet_size):
-    return [bitstream[i:i + packet_size] for i in range(0, len(bitstream), packet_size)]
+def break_into_packets(bitstream, packet_size, redundant_bits):
+    dataword_size = packet_size - redundant_bits
+    if dataword_size <= 0:
+        raise ValueError("Packet size must be greater than the number of redundant bits.")
+    return [bitstream[i:i + dataword_size] for i in range(0, len(bitstream), dataword_size)]
 
 def generate_codeword(dataword, technique):
     if technique == 'checksum':
@@ -24,17 +27,30 @@ def generate_codeword(dataword, technique):
     else:
         raise ValueError("Invalid technique specified")
 
-def manual_error_injection(codeword):
+def manual_error_injection(word):
     error_type = input("Enter error type (SINGLE, DOUBLE, ODD, BURST, NONE): ").upper()
     if error_type == 'NONE':
-        return codeword, "No Error", None
-    if error_type == 'BURST':
+        return word, "No Error", None
+    if error_type == 'SINGLE':
+        index = int(input("Enter index for SINGLE error: "))
+        infected_codeword = inject_error_manual(word, error_type, indices=[index])
+        return infected_codeword, "SINGLE", None
+    elif error_type == 'DOUBLE':
+        index1 = int(input("Enter first index for DOUBLE error: "))
+        index2 = int(input("Enter second index for DOUBLE error: "))
+        infected_codeword = inject_error_manual(word, error_type, indices=[index1, index2])
+        return infected_codeword, "DOUBLE", None
+    elif error_type == 'ODD':
+        indices = list(map(int, input("Enter indices for ODD error (comma-separated): ").split(',')))
+        infected_codeword = inject_error_manual(word, error_type, indices=indices)
+        return infected_codeword, "ODD", None
+    elif error_type == 'BURST':
+        start_index = int(input("Enter start index for BURST error: "))
         burst_length = int(input("Enter burst length: "))
-        infected_codeword = inject_error(codeword, error_type, burst_length)
+        infected_codeword = inject_error_manual(word, error_type, start_index=start_index, burst_length=burst_length)
         return infected_codeword, "BURST", burst_length
     else:
-        infected_codeword = inject_error(codeword, error_type)
-        return infected_codeword, error_type, None
+        raise ValueError("Invalid error type specified")
 
 def random_error_injection(codeword):
     error_type = random.choice(['SINGLE', 'DOUBLE', 'ODD', 'BURST', 'NONE'])
@@ -42,10 +58,10 @@ def random_error_injection(codeword):
         return codeword, "No Error", None
     if error_type == 'BURST':
         burst_length = random.randint(2, len(codeword))
-        infected_codeword = inject_error(codeword, error_type, burst_length)
+        infected_codeword = inject_error_random(codeword, error_type, burst_length)
         return infected_codeword, "BURST", burst_length
     else:
-        infected_codeword = inject_error(codeword, error_type)
+        infected_codeword = inject_error_random(codeword, error_type)
         return infected_codeword, error_type, None
 
 def send_to_server(s, packet):
@@ -67,8 +83,24 @@ def main():
     technique = sys.argv[3].lower()
     error_mode = sys.argv[4].lower()
 
+    redundant_bits = {
+        'checksum': 16,
+        'crc-8': 8,
+        'crc-10': 10,
+        'crc-16': 16,
+        'crc-32': 32
+    }.get(technique)
+
+    if redundant_bits is None:
+        print("Invalid technique specified")
+        sys.exit(1)
+
+    if packet_size <= redundant_bits:
+        print("Packet size must be greater than the number of redundant bits.")
+        sys.exit(1)
+
     bitstream = read_file(file_path)
-    packets = break_into_packets(bitstream, packet_size)
+    packets = break_into_packets(bitstream, packet_size, redundant_bits)
 
     results = []
 

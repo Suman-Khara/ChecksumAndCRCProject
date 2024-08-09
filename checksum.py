@@ -1,4 +1,4 @@
-from error_injector import inject_error
+from error_injector import inject_error_random
 
 def generate_checksum(chunks):
     res = 0  # Initialize result as an integer for summing
@@ -73,9 +73,9 @@ if __name__ == "__main__":
 
     for error_type in error_types:
         if error_type == 'BURST':
-            infected_codeword = inject_error(codeword, error_type, burst_length)
+            infected_codeword = inject_error_random(codeword, error_type, burst_length)
         else:
-            infected_codeword = inject_error(codeword, error_type)
+            infected_codeword = inject_error_random(codeword, error_type)
 
         is_valid = validate_checksum_codeword(infected_codeword)
         print(f"\n{error_type} - Valid: {is_valid}")

@@ -1,4 +1,4 @@
-from error_injector import inject_error
+from error_injector import inject_error_random
 
 # Define CRC polynomials
 CRC_POLYNOMIALS = {
@@ -90,9 +90,9 @@ if __name__ == "__main__":
         print(validate_crc_codeword(codeword, crc_type))
         for error_type in error_types:
             if error_type == 'BURST':
-                infected_codeword = inject_error(codeword, error_type, burst_length)
+                infected_codeword = inject_error_random(codeword, error_type, burst_length)
             else:
-                infected_codeword = inject_error(codeword, error_type)
+                infected_codeword = inject_error_random(codeword, error_type)
             
             is_valid = validate_crc_codeword(infected_codeword, crc_type)
             print(f"\n{error_type} - Valid: {is_valid}")
